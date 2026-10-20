@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  html, body { width: 1200px; height: 630px; margin: 0; overflow: hidden; }
+  body {
+    position: relative;
+    padding: 50px 58px;
+    font-family: "Archivo", "Helvetica Neue", Arial, sans-serif;
+    color: #101418;
+    background-color: #f2f5f7;
+    background-image:
+      linear-gradient(rgba(16,20,24,.055) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(16,20,24,.055) 1px, transparent 1px);
+    background-size: 30px 30px;
+  }
+  .topline { position: absolute; left: 0; top: 0; width: 100%; height: 7px; background: #2747e8; }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .mark { display: grid; grid-template-columns: repeat(5, 4px); gap: 2px; padding: 6px; background: #fff; border: 1px solid #101418; }
+  .mark i { width: 4px; height: 4px; border-radius: 50%; background: #d2dce3; }
+  .mark i.b { background: #2747e8; }
+  .mark i.l { background: #d8ff3e; }
+  .mark i.m { background: #ff4f9a; }
+  .mark i.c { background: #2fd3e2; }
+  .name { font-size: 19px; font-weight: 700; letter-spacing: -.04em; }
+  .name em { font-style: normal; color: #2747e8; }
+  .kicker { margin: 45px 0 0; font-family: "IBM Plex Mono", Menlo, monospace; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: #6f7a84; }
+  h1 { margin: 14px 0 0; max-width: 640px; font-size: 76px; line-height: .9; letter-spacing: -.07em; font-weight: 700; }
+  h1 span { color: #2747e8; }
+  .sub { margin: 20px 0 0; max-width: 560px; font-size: 21px; line-height: 1.35; color: #3f4a54; }
+  .specs { position: absolute; left: 58px; bottom: 49px; display: flex; border-top: 1px solid #aab6bf; border-bottom: 1px solid #aab6bf; }
+  .spec { padding: 10px 22px 10px 0; }
+  .spec + .spec { padding-left: 22px; border-left: 1px solid #d3dce2; }
+  .spec small { display: block; font-family: "IBM Plex Mono", Menlo, monospace; font-size: 9px; letter-spacing: .08em; text-transform: uppercase; color: #6f7a84; }
+  .spec b { display: block; margin-top: 2px; font-family: "IBM Plex Mono", Menlo, monospace; font-size: 12px; font-weight: 500; }
+  .board { position: absolute; right: 58px; top: 60px; width: 390px; padding: 10px; background: #fff; border: 1px solid #101418; }
+  .board::before, .board::after { content: ""; position: absolute; width: 14px; height: 14px; border-color: #2747e8; border-style: solid; }
+  .board::before { left: -5px; top: -5px; border-width: 2px 0 0 2px; }
+  .board::after { right: -5px; bottom: -5px; border-width: 0 2px 2px 0; }
+  .board-head, .board-foot { display: flex; justify-content: space-between; gap: 10px; padding: 2px 1px 8px; font-family: "IBM Plex Mono", Menlo, monospace; font-size: 8px; letter-spacing: .07em; text-transform: uppercase; color: #6f7a84; }
+  .board-foot { padding: 8px 1px 2px; }
+  .board-foot strong { color: #2747e8; font-weight: 600; }
+  .board img { display: block; width: 100%; border: 1px solid #d3dce2; background: #e8eef2; }
+  .tag { position: absolute; right: 70px; bottom: 45px; padding: 9px 13px; background: #d8ff3e; border: 1px solid #101418; font-family: "IBM Plex Mono", Menlo, monospace; font-size: 10px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; transform: rotate(-2deg); }
+</style>
+</head>
+<body>
+  <div class="topline"></div>
+  <div class="brand">
+    <span class="mark" aria-hidden="true">
+      <i></i><i class="b"></i><i></i><i></i><i></i>
+      <i></i><i></i><i class="l"></i><i></i><i></i>
+      <i></i><i></i><i class="c"></i><i></i><i class="b"></i>
+      <i></i><i></i><i class="m"></i><i></i><i></i>
+      <i></i><i></i><i class="l"></i><i></i><i></i>
+    </span>
+    <span class="name">beadpatternmaker<em>.io</em></span>
+  </div>
+  <p class="kicker">Photo in / coded chart out</p>
+  <h1>Perler bead<br>pattern maker<span>.</span></h1>
+  <p class="sub">A colour code in every cell.<br>A print-ready PDF at the end.</p>
+  <div class="specs">
+    <div class="spec"><small>Grid</small><b>12–80 beads</b></div>
+    <div class="spec"><small>Palettes</small><b>Perler · Hama · Artkal</b></div>
+    <div class="spec"><small>Output</small><b>PDF · PNG · CSV</b></div>
+  </div>
+  <div class="board">
+    <div class="board-head"><span>SPECIMEN / 015</span><span>15 × 13</span></div>
+    <img src="../assets/designs/cat.svg" alt="">
+    <div class="board-foot"><span>LITTLE CAT / 3 COLOURS</span><strong>97 BEADS</strong></div>
+  </div>
+  <div class="tag">26 colours per palette</div>
+</body>
+</html>

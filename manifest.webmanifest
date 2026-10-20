@@ -1,0 +1,21 @@
+{
+  "name": "Bead Pattern Maker",
+  "short_name": "Bead Pattern",
+  "description": "Turn a photo into a coded perler bead pattern and print it.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f2f5f7",
+  "theme_color": "#f2f5f7",
+  "icons": [
+    {
+      "src": "/assets/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "/assets/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
+}

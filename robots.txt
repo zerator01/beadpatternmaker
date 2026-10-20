@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://beadpatternmaker.io/sitemap.xml
