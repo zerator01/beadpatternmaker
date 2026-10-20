@@ -16,12 +16,14 @@ const BPMPatterns = require(path.join(jsDir, "patterns-data.js"));
 global.BPMQuant = require(path.join(jsDir, "quantize.js"));
 global.BPMRender = require(path.join(jsDir, "render.js"));
 const BPMPDF = require(path.join(jsDir, "pdf.js"));
+const Pages = require(path.join(__dirname, "pages.js"));
 
 const SITE = "https://beadpatternmaker.io";
 const BRAND = "beadpatternmaker";
 const YEAR = "2026";
-const UPDATED = "2026-10-17";
+const UPDATED = "2026-10-20";
 const PERLER = BPMPalettes.get("perler");
+const DESIGN_COUNT = BPMPatterns.LIST.length;
 
 // ---------------------------------------------------------------------------
 // tiny helpers
@@ -75,6 +77,29 @@ function themeLabel(def) {
   return BPMPatterns.THEME_LABELS[def.theme] || def.theme;
 }
 
+function capitalise(text) {
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+// Asset file names carry the subject, the keyword and the grid size, e.g.
+// /assets/designs/cat-perler-bead-pattern-15x13.svg
+function designFile(def, ext) {
+  const d = BPMPatterns.dimensions(def);
+  const dir = ext === "pdf" ? "pdfs" : "designs";
+  return `/assets/${dir}/${def.slug}-perler-bead-pattern-${d.w}x${d.h}.${ext}`;
+}
+
+function templateFile(t, ext) {
+  return `/assets/templates/perler-bead-template-${t.w}x${t.h}.${ext}`;
+}
+
+// Gallery cards open in the /perler-bead-maker/ tool page once it is live.
+// Until then, and on the homepage itself, they open in the homepage tool.
+function designHref(def, onHome) {
+  const base = !onHome && Pages.isLive("/perler-bead-maker/") ? "/perler-bead-maker/" : "/";
+  return base + "?design=" + encodeURIComponent(def.slug);
+}
+
 // ---------------------------------------------------------------------------
 // shared chrome
 // ---------------------------------------------------------------------------
@@ -86,6 +111,36 @@ const NAV = [
   { href: "/fuse-bead-patterns/", label: "Patterns", key: "patterns" },
   { href: "/perler-bead-templates/", label: "Templates", key: "templates" },
   { href: "/how-to-iron-perler-beads/", label: "How to iron", key: "iron" }
+].filter(function (item) { return Pages.isLive(item.href); });
+
+const FOOTER_COLUMNS = [
+  {
+    title: "Make",
+    links: [
+      ["/", "Pattern maker"],
+      ["/perler-bead-maker/", "Perler bead maker"],
+      ["/perler-bead-generator/", "Perler bead generator"],
+      ["/fuse-bead-pattern-maker/", "Fuse bead pattern maker"]
+    ]
+  },
+  {
+    title: "Browse",
+    links: [
+      ["/perler-bead-designs/", "Perler bead designs"],
+      ["/fuse-bead-ideas/", "Fuse bead ideas"],
+      ["/fuse-bead-patterns/", "Fuse bead patterns"],
+      ["/perler-bead-templates/", "Printable templates"]
+    ]
+  },
+  {
+    title: "Learn",
+    links: [
+      ["/how-to-iron-perler-beads/", "How to iron perler beads"],
+      ["/how-to-iron-perler-beads/#troubleshooting", "Ironing troubleshooting"],
+      ["/perler-bead-designs/#sizes", "Pattern size guide"],
+      ["/fuse-bead-patterns/#reading", "How to read a chart"]
+    ]
+  }
 ];
 
 function brandMark() {
@@ -163,6 +218,19 @@ function header(active) {
 </header>`;
 }
 
+function footerColumns() {
+  return FOOTER_COLUMNS.map(function (col) {
+    const links = col.links.filter(function (link) { return Pages.isLive(link[0]); });
+    if (!links.length) return "";
+    return `<div>
+          <h4>${esc(col.title)}</h4>
+          <ul>
+            ${links.map(function (link) { return `<li><a href="${link[0]}">${esc(link[1])}</a></li>`; }).join("\n            ")}
+          </ul>
+        </div>`;
+  }).filter(Boolean).join("\n        ");
+}
+
 function footer() {
   return `<footer class="site-footer">
   <div class="wrap">
@@ -177,33 +245,7 @@ function footer() {
         <a class="footer-link" href="/#tool">Open the workbench <span>→</span></a>
       </div>
       <div class="footer-grid">
-        <div>
-          <h4>Make</h4>
-          <ul>
-            <li><a href="/">Pattern maker</a></li>
-            <li><a href="/perler-bead-maker/">Perler bead maker</a></li>
-            <li><a href="/perler-bead-generator/">Perler bead generator</a></li>
-            <li><a href="/fuse-bead-pattern-maker/">Fuse bead pattern maker</a></li>
-          </ul>
-        </div>
-        <div>
-          <h4>Browse</h4>
-          <ul>
-            <li><a href="/perler-bead-designs/">Perler bead designs</a></li>
-            <li><a href="/fuse-bead-ideas/">Fuse bead ideas</a></li>
-            <li><a href="/fuse-bead-patterns/">Fuse bead patterns</a></li>
-            <li><a href="/perler-bead-templates/">Printable templates</a></li>
-          </ul>
-        </div>
-        <div>
-          <h4>Learn</h4>
-          <ul>
-            <li><a href="/how-to-iron-perler-beads/">How to iron perler beads</a></li>
-            <li><a href="/how-to-iron-perler-beads/#troubleshooting">Ironing troubleshooting</a></li>
-            <li><a href="/perler-bead-designs/#sizes">Pattern size guide</a></li>
-            <li><a href="/fuse-bead-patterns/#reading">How to read a chart</a></li>
-          </ul>
-        </div>
+        ${footerColumns()}
       </div>
     </div>
     <div class="footer-bottom">
@@ -634,20 +676,23 @@ function socialCard() {
 // cards and galleries
 // ---------------------------------------------------------------------------
 
+// opts.home: the card sits on the homepage. opts.action "pdf": PDF first.
+// opts.text "idea": show the finishing idea instead of the description.
 function designCard(def, opts) {
+  opts = opts || {};
   const meta = patternMeta(def);
   const alt = `${def.name} perler bead design in a ${meta.w} by ${meta.h} grid using ${plural(meta.colors, "colour")}`;
-  const open = `/?design=${encodeURIComponent(def.slug)}`;
-  const pdf = `/assets/pdfs/${def.slug}.pdf`;
-  const action = opts && opts.action === "pdf"
-    ? `<a class="btn btn--primary" href="${pdf}" download>PDF</a><a class="btn btn--ghost" href="${open}">Open</a>`
-    : `<a class="btn btn--primary" href="${open}">Use design</a><a class="btn btn--ghost" href="${pdf}" download>PDF</a>`;
+  const pdf = designFile(def, "pdf");
+  const make = `<a class="btn ${opts.action === "pdf" ? "btn--ghost" : "btn--primary"} btn--wide" href="${designHref(def, opts.home)}">Make this pattern</a>`;
+  const action = opts.action === "pdf"
+    ? `<a class="btn btn--primary" href="${pdf}" download>PDF</a>${make}`
+    : `${make}<a class="btn btn--ghost" href="${pdf}" download>PDF</a>`;
   return `<article class="pattern-card" data-tag="${attr(def.theme)}">
   <div class="plate-top"><span class="plate-theme">${esc(themeLabel(def))}</span><span>${meta.w} × ${meta.h}</span></div>
-  <div class="thumb"><img src="/assets/designs/${def.slug}.svg" alt="${attr(alt)}" loading="lazy" width="640" height="640"></div>
+  <div class="thumb"><img src="${designFile(def, "svg")}" alt="${attr(alt)}" loading="lazy" width="640" height="640"></div>
   <div class="meta">
     <h3>${esc(def.name)}</h3>
-    <p>${esc(def.description)}</p>
+    <p>${esc(opts.text === "idea" ? def.idea : def.description)}</p>
     <div class="meta-row">
       <span>${plural(meta.colors, "colour")}</span>
       <span>${meta.total} beads</span>
@@ -671,11 +716,11 @@ function filterBar() {
 function templateCard(t) {
   return `<article class="template-card">
   <div class="plate-top"><span class="plate-theme">TEMPLATE</span><span>${t.w} × ${t.h}</span></div>
-  <img src="/assets/templates/${t.slug}.svg" alt="${attr(t.name + " blank perler bead template with grid lines")}" loading="lazy" width="640" height="640">
+  <img src="${templateFile(t, "svg")}" alt="${attr(t.name + " blank perler bead template with grid lines")}" loading="lazy" width="640" height="640">
   <div class="meta">
     <h3>${esc(t.name)}</h3>
     <p>${esc(t.note)}</p>
-    <a class="btn btn--small" href="/assets/templates/${t.slug}.pdf" download>Download PDF</a>
+    <a class="btn btn--small" href="${templateFile(t, "pdf")}" download>Download PDF</a>
   </div>
 </article>`;
 }
@@ -756,12 +801,46 @@ function ctaBand(title, text, href, label) {
 </section>`;
 }
 
+const CONTENT_PAGES = ["designs", "ideas", "patterns", "templates", "iron"];
+
+// End-of-page links: this page's sentence linking back to the homepage, then
+// the other live content pages with their target keyword as the anchor.
+function keepGoing(key) {
+  const self = Pages.page(key);
+  const intro = self.home
+    ? esc(self.home).replace(/\{([^}]+)\}/, '<a href="/">$1</a>')
+    : "Every design here is free, comes with an exact bead count and opens straight in the maker.";
+  const others = CONTENT_PAGES
+    .filter(function (k) { return k !== key && Pages.isLive(Pages.page(k).path); })
+    .map(Pages.page);
+  return `<section class="section section--tight">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="eyebrow-line">Keep going</p>
+      <h2>Find your next pattern</h2>
+      <p>${intro}</p>
+    </div>${others.length ? `
+    <div class="callout-grid callout-grid--fit">
+      ${others.map(function (p) {
+        return `<article class="callout-card">
+        <h3><a href="${p.path}">${esc(capitalise(p.keyword))}</a></h3>
+        <p>${esc(p.blurb)}</p>
+      </article>`;
+      }).join("\n      ")}
+    </div>` : ""}
+  </div>
+</section>`;
+}
+
 // ---------------------------------------------------------------------------
 // page renderers
 // ---------------------------------------------------------------------------
 
 function homePage() {
   const featured = ["daisy", "cat", "mushroom", "rocket", "rainbow", "smiley"].map(BPMPatterns.find);
+  const catImg = designFile(BPMPatterns.find("cat"), "svg");
+  const sizeLinks = `<a href="/perler-bead-designs/#sizes">See the full pattern size guide</a>` +
+    (Pages.isLive("/fuse-bead-patterns/") ? ` or browse the <a href="/fuse-bead-patterns/">printable fuse bead patterns</a>` : "") + ".";
   const schema = {
     "@context": "https://schema.org",
     "@graph": [
@@ -787,7 +866,7 @@ function homePage() {
     ]
   };
   return head({
-    title: "Perler Bead Pattern Maker – Photo to Printable Pattern",
+    title: "Perler Bead Pattern Maker – Free Online Tool",
     desc: "Turn a photo into a perler bead pattern with a colour code in every cell, exact bead counts and a print-ready PDF. Free, no account, no upload.",
     path: "/",
     active: "home",
@@ -814,7 +893,7 @@ function homePage() {
         </div>
         <div class="hero-board">
           <div class="board-top"><span>SPECIMEN / 015</span><span>15 × 13</span></div>
-          <img src="/assets/designs/cat.svg" alt="Little cat perler bead design in a 15 by 13 grid using 3 colours" width="640" height="640">
+          <img src="${catImg}" alt="Little cat perler bead design in a 15 by 13 grid using 3 colours" width="640" height="640">
           <div class="board-bottom"><span>LITTLE CAT / 3 COLOURS</span><strong>97 BEADS</strong></div>
         </div>
       </div>
@@ -856,7 +935,7 @@ function homePage() {
       <div class="export-stack" aria-hidden="true">
         <div class="export-sheet export-sheet--back"></div>
         <div class="export-sheet">
-          <img src="/assets/designs/cat.svg" alt="" width="640" height="640">
+          <img src="${catImg}" alt="" width="640" height="640">
           <div class="sheet-caption">CAT · 15 × 13 · 97 BEADS</div>
           <div class="sheet-rule"></div>
           <div class="sheet-line"></div>
@@ -890,7 +969,7 @@ function homePage() {
             <p>Paint, erase or pick a colour straight on the chart. Undo with ⌘Z, redo with ⇧⌘Z, and the bead counts stay live while you work.</p>
           </div>
           <div class="feature-chart">
-            <img src="/assets/designs/rainbow.svg" alt="Rainbow fuse bead design in a 15 by 11 grid using 4 colours" width="640" height="640">
+            <img src="${designFile(BPMPatterns.find("rainbow"), "svg")}" alt="Rainbow fuse bead design in a 15 by 11 grid using 4 colours" width="640" height="640">
           </div>
         </article>
 
@@ -968,7 +1047,7 @@ function homePage() {
         <h2>Which pegboard should I use?</h2>
         <p>A 29 × 29 square pegboard is the workhorse for perler projects. It gives you enough cells for a clear animal face or a small scene without turning into a multi-evening build.</p>
         <p>Use a 10 × 10 or 16 × 16 board for keychains and magnets. Go to 48 × 48 or 64 × 64 when you want a wall piece and are ready to print the chart across several sheets.</p>
-        <p><a href="/perler-bead-designs/#sizes">See the full pattern size guide</a> or browse the <a href="/fuse-bead-patterns/">printable fuse bead patterns</a>.</p>
+        <p>${sizeLinks}</p>
       </div>
       <div class="table-wrap">
         <table class="beads">
@@ -989,10 +1068,10 @@ function homePage() {
       <div class="section-head">
         <p class="eyebrow-line">Pattern library</p>
         <h2>Start from a design instead</h2>
-        <p>Thirty free designs with exact bead counts. Open one in the maker to resize it, recolour it or print the chart.</p>
+        <p>Thirty free designs with exact bead counts. Open one in the maker to recolour it, fix a bead or print the chart.</p>
       </div>
       <div class="pattern-grid">
-        ${featured.map(function (def) { return designCard(def); }).join("\n        ")}
+        ${featured.map(function (def) { return designCard(def, { home: true }); }).join("\n        ")}
       </div>
       <p style="margin-top:22px"><a class="btn" href="/perler-bead-designs/">Browse all 30 designs</a></p>
     </div>
@@ -1007,6 +1086,8 @@ function homePage() {
       ${faq(FAQ_HOME)}
     </div>
   </section>
+
+  ${keepGoing("home")}
 
   ${ctaBand("Turn a photo into a pegboard tonight", "Free, no account, and the bead list is already counted.", "#tool", "Open the maker")}
 </main>
@@ -1033,13 +1114,13 @@ function designsPage() {
       "@type": "ItemList",
       numberOfItems: defs.length,
       itemListElement: defs.map(function (d, i) {
-        return { "@type": "ListItem", position: i + 1, name: d.name, url: SITE + "/?design=" + d.slug };
+        return { "@type": "ListItem", position: i + 1, name: d.name, url: SITE + designHref(d) };
       })
     }
   };
   return head({
-    title: "Perler Bead Designs – 30 Free Patterns with Colour Codes",
-    desc: "Browse 30 free perler bead designs with grid sizes, exact colour counts and printable PDFs. Open any design in the maker to resize or recolour it.",
+    title: `Perler Bead Designs – ${DESIGN_COUNT} Free Ideas and Patterns`,
+    desc: "Browse 30 free perler bead designs with grid sizes, exact colour counts and printable PDFs. Open any design in the maker to recolour it or fix a bead.",
     path: "/perler-bead-designs/",
     active: "designs",
     ogTitle: "Perler bead designs — 30 free coded patterns",
@@ -1050,7 +1131,7 @@ function designsPage() {
     <div class="wrap">
       ${breadcrumb([{ label: "Home", href: "/" }, { label: "Perler bead designs" }])}
       <h1>Perler bead designs</h1>
-      <p class="lede">Thirty free perler bead designs you can open in the maker, resize, recolour and print. Every card lists the grid size, the number of colours and the exact bead count, so you know what you are committing to before you pull a single bead. The designs are original charts built for 5 mm midi beads, from a 10-minute keychain to a full 29 × 29 pegboard piece. Pick a shape, open it in the maker, then switch the palette if you want the same design in Hama or Artkal colours.</p>
+      <p class="lede">${DESIGN_COUNT} free perler bead designs, each one drawn bead by bead for a standard 5 mm pegboard. Every card shows the grid size, the number of colours and the exact bead count, so you know what a design will use before you pull a single bead. Most are small, easy perler bead designs that fit on one square board — cute animals, flowers, food, space, retro, holiday and 3D shapes — and each one comes with a free printable PDF chart. Click “Make this pattern” to open a design in the maker, where you can swap it to Hama or Artkal colours or fix a single bead before you print. They are original patterns, not traced artwork.</p>
     </div>
   </section>
 
@@ -1068,7 +1149,7 @@ function designsPage() {
       <div class="section-head">
         <p class="eyebrow-line">Pick a size</p>
         <h2>Match the design to the board you own</h2>
-        <p>Most of the designs here are 11–15 beads across. A 29 × 29 board gives you room to scale a small design up; a 10 × 10 board is best for a single motif.</p>
+        <p>Most of the designs here are 11–15 beads across, so any of them fits a standard 29 × 29 board with room for a border. For a 10 × 10 keychain board, make your own chart from a photo at 10 beads wide.</p>
       </div>
       <div class="table-wrap">
         <table class="beads">
@@ -1096,12 +1177,12 @@ function designsPage() {
         <article class="callout-card">
           <span class="num">1</span>
           <h3>Open it in the maker</h3>
-          <p>Click “Use this design” and the chart opens in the editor. Paint individual beads, erase the background or remap the whole thing to another palette.</p>
+          <p>Click “Make this pattern” and the chart opens in the editor. Paint or erase individual beads, and undo any slip with one keystroke.</p>
         </article>
         <article class="callout-card">
           <span class="num">2</span>
-          <h3>Resize it for your board</h3>
-          <p>A design is a starting point, not a fixed file. Change the grid width, then fix the few cells that need it around the eyes or outline.</p>
+          <h3>Switch it to your beads</h3>
+          <p>Pick the Hama or Artkal palette and every bead swaps to that brand's colour for the same code, so the chart and the bead list match the jar you own.</p>
         </article>
         <article class="callout-card">
           <span class="num">3</span>
@@ -1112,6 +1193,8 @@ function designsPage() {
     </div>
   </section>
 
+  ${keepGoing("designs")}
+
   ${ctaBand("Have a photo you want to turn into beads?", "Upload it to the free perler bead pattern maker and get a coded chart in seconds.", "/#tool", "Open the maker")}
 </main>
 ${footer()}
@@ -1120,12 +1203,88 @@ ${scripts({ gallery: true })}
 </html>`;
 }
 
+// The ideas page is sorted by what the finished piece is for, not by theme, so
+// it does not repeat the designs page. Designs missing from every group land
+// in a catch-all group at the end.
+const IDEA_GROUPS = [
+  {
+    id: "easy",
+    label: "Beginners",
+    title: "Easy fuse bead ideas for beginners",
+    intro: "One to three colours and a simple outline, so a first board takes well under an hour and there is nothing to count twice. Start here if you have never fused a piece before.",
+    slugs: ["berry-heart", "star", "smiley", "dinosaur", "cat"]
+  },
+  {
+    id: "small",
+    label: "Keychains & magnets",
+    title: "Small fuse bead ideas: keychains, magnets and charms",
+    intro: "Little designs that stay light enough to hang from a bag or hold up a note on the fridge. Iron both sides, because small pieces get handled the most.",
+    slugs: ["pastel-heart", "mushroom", "fox", "butterfly", "ginger-cat", "alien"]
+  },
+  {
+    id: "gifts",
+    label: "Gifts",
+    title: "Fuse bead ideas for gifts and cards",
+    intro: "Flat, light and quick to make, which is exactly what you want for a gift tag, a bookmark or something tucked inside a birthday card.",
+    slugs: ["strawberry", "bunny", "cassette", "frog"]
+  },
+  {
+    id: "party",
+    label: "Party & holidays",
+    title: "Party and holiday fuse bead ideas",
+    intro: "Garlands, cupcake toppers and table decorations for Halloween, Christmas and birthdays. Make several at once; they look better as a set.",
+    slugs: ["ghost", "pumpkin", "christmas-tree", "rocket", "mint-rocket"]
+  },
+  {
+    id: "decor",
+    label: "Room & desk",
+    title: "Fuse bead ideas for your room and desk",
+    intro: "Coasters, window hangings, mobiles and shelf pieces. Iron these on both sides so they stay flat once they are on display.",
+    slugs: ["daisy", "rainbow", "panda", "goldfish", "bee", "ringed-planet", "blue-toadstool", "game-controller"]
+  },
+  {
+    id: "3d",
+    label: "3D",
+    title: "3D fuse bead ideas",
+    intro: "Flat pieces shaded to look solid. Make a few in different colours and they turn into a small sculpture on a shelf.",
+    slugs: ["cube", "3d-heart"]
+  }
+];
+
+function ideaGroups() {
+  const used = new Set();
+  const groups = IDEA_GROUPS.map(function (group) {
+    const defs = group.slugs.map(function (slug) {
+      const def = BPMPatterns.find(slug);
+      if (!def) throw new Error("IDEA_GROUPS lists unknown design " + slug);
+      used.add(slug);
+      return def;
+    });
+    return Object.assign({}, group, { defs: defs });
+  });
+  const rest = BPMPatterns.LIST.filter(function (def) { return !used.has(def.slug); });
+  if (rest.length) {
+    groups.push({
+      id: "more",
+      label: "More",
+      title: "More fuse bead ideas",
+      intro: "The newest designs in the library, each with a tip for finishing it.",
+      defs: rest
+    });
+  }
+  return groups;
+}
+
 function ideasPage() {
-  const defs = BPMPatterns.LIST;
+  const groups = ideaGroups();
+  const defs = [].concat.apply([], groups.map(function (g) { return g.defs; }));
+  const ironLink = Pages.isLive("/how-to-iron-perler-beads/")
+    ? `<p class="note">Read the <a href="/how-to-iron-perler-beads/">step-by-step ironing guide</a> before your first fuse.</p>`
+    : "";
   const craftIdeas = [
     ["Keychain", "Add a jump ring and a split ring. Use a 10 × 10 or 16 × 16 design so it does not pull at a pocket.", "keychain"],
     ["Fridge magnet", "Glue a magnetic strip to the back. A 13 × 13 design is light enough to stay put.", "magnet"],
-    ["Coaster", "Scale a simple motif to 29 × 29 and back it with cork. Keep the surface flat and iron both sides well.", "coaster"],
+    ["Coaster", "Centre a simple motif on a 29 × 29 board, fill the space around it and back it with cork. Iron both sides well.", "coaster"],
     ["Pin badge", "Use a small design and attach a pin back with strong glue. Avoid ironing the back too flat where the pin sits.", "pin"],
     ["Bag charm", "Make two matching designs, iron them flat, and join with a short chain or a bead loop.", "charm"],
     ["Ornament", "Leave a gap at the top for a ribbon, or add a loop of beads before fusing. Good for holiday trees and windows.", "ornament"]
@@ -1135,45 +1294,50 @@ function ideasPage() {
     "@type": "CollectionPage",
     name: "Fuse bead ideas",
     url: SITE + "/fuse-bead-ideas/",
-    description: "Thirty fuse bead ideas with free designs, colour counts and printable charts.",
+    description: "Fuse bead ideas sorted by occasion, with free designs, colour counts and printable charts.",
     mainEntity: {
       "@type": "ItemList",
       numberOfItems: defs.length,
       itemListElement: defs.map(function (d, i) {
-        return { "@type": "ListItem", position: i + 1, name: d.name, url: SITE + "/?design=" + d.slug };
+        return { "@type": "ListItem", position: i + 1, name: d.name, url: SITE + designHref(d) };
       })
     }
   };
   return head({
-    title: "Fuse Bead Ideas – 30 Designs & Ways to Use Them",
-    desc: "Thirty fuse bead ideas with free designs, exact bead counts and printable charts. Keychains, magnets, coasters and more for Perler and Hama beads.",
+    title: `Fuse Bead Ideas – ${DESIGN_COUNT} Designs to Inspire You`,
+    desc: `${DESIGN_COUNT} fuse bead ideas sorted by what you want to make: easy first projects, keychains and magnets, gifts, party decorations, room decor and 3D pieces.`,
     path: "/fuse-bead-ideas/",
     active: "ideas",
-    ogTitle: "Fuse bead ideas — 30 designs and craft ideas",
-    ogDesc: "Find a design, open it in the maker, and turn it into a keychain, magnet or coaster.",
+    ogTitle: `Fuse bead ideas — ${DESIGN_COUNT} designs sorted by occasion`,
+    ogDesc: "Find a design, open it in the maker, and turn it into a keychain, magnet, gift or decoration.",
     schema: schema
   }) + `<main id="main">
   <section class="page-hero">
     <div class="wrap">
       ${breadcrumb([{ label: "Home", href: "/" }, { label: "Fuse bead ideas" }])}
       <h1>Fuse bead ideas</h1>
-      <p class="lede">Thirty fuse bead ideas for the next time you want to make something but cannot decide what. The designs are grouped by theme — animals, flowers, food, space, retro, holiday and 3D — and every one has an exact bead count and a printable chart. Fuse beads and perler beads are the same craft under different names, so these ideas work whether your jar says Perler, Hama or Artkal. Pick a design, decide what it becomes, then open it in the maker to resize it or swap the palette.</p>
+      <p class="lede">Fuse bead ideas for the moment you have a tray of beads and no plan. This page is sorted by what you want to make — easy first projects, small pieces for keychains and magnets, gifts and cards, party and holiday decorations, things for your room, and 3D builds. Every idea comes with a ready-made design, an exact bead count and a free printable chart, plus a tip for turning the flat piece into something you will actually use. Fuse beads, Perler beads and Hama beads are the same craft under different brand names, so each idea works with whichever jar you own. Open a design in the maker to switch it to your bead brand or fix a bead before you start.</p>
+      <nav class="filter-bar jump-bar" aria-label="Jump to a group of ideas">
+        <span class="filter-label">Jump to</span>
+        ${groups.map(function (g) { return `<a href="#${g.id}">${esc(g.label)}</a>`; }).join("\n        ")}
+      </nav>
     </div>
   </section>
 
-  <section class="section section--tight">
+  ${groups.map(function (g, i) {
+    return `<section class="section section--tight" id="${g.id}">
     <div class="wrap">
       <div class="section-head">
-        <p class="eyebrow-line">The library</p>
-        <h2>Pick a fuse bead idea</h2>
-        <p>Filter by theme, then open a design in the maker. Every card links to a PDF chart as well.</p>
+        <p class="eyebrow-line">${pad2(i + 1)} / ${esc(g.label)}</p>
+        <h2>${esc(g.title)}</h2>
+        <p>${esc(g.intro)}</p>
       </div>
-      ${filterBar()}
-      <div class="pattern-grid" data-gallery>
-        ${defs.map(function (def) { return designCard(def); }).join("\n        ")}
+      <div class="pattern-grid">
+        ${g.defs.map(function (def) { return designCard(def, { text: "idea" }); }).join("\n        ")}
       </div>
     </div>
-  </section>
+  </section>`;
+  }).join("\n\n  ")}
 
   <section class="section section--tight">
     <div class="wrap">
@@ -1212,15 +1376,17 @@ function ideasPage() {
           <li><span class="check-mark" aria-hidden="true">✓</span>Work on a flat, heat-safe surface</li>
           <li><span class="check-mark" aria-hidden="true">✓</span>Let the piece cool under a book to stop curling</li>
         </ul>
-        <p class="note">Read the <a href="/how-to-iron-perler-beads/">step-by-step ironing guide</a> before your first fuse.</p>
+        ${ironLink}
       </div>
     </div>
   </section>
 
+  ${keepGoing("ideas")}
+
   ${ctaBand("Turn one of these ideas into your own pattern", "Upload a photo or open a design, then print the coded chart.", "/#tool", "Make a pattern")}
 </main>
 ${footer()}
-${scripts({ gallery: true })}
+${scripts({})}
 </body>
 </html>`;
 }
@@ -1254,7 +1420,7 @@ function patternsPage() {
     <div class="wrap">
       ${breadcrumb([{ label: "Home", href: "/" }, { label: "Fuse bead patterns" }])}
       <h1>Fuse bead patterns</h1>
-      <p class="lede">Free printable fuse bead patterns with a colour code in every cell, a heavier line every five beads and an exact bead list on the last page. Each PDF is built for A4 paper and prints at 100%, so the grid can sit next to your pegboard while you work. The thirty charts below are original designs, not copied artwork, and each one can be opened in the maker if you want to resize it or change the palette. Print one for a quick keychain or scale a chart up for a full 29 × 29 board.</p>
+      <p class="lede">Free printable fuse bead patterns with a colour code in every cell, a heavier line every five beads and an exact bead list on the last page. Each PDF is built for A4 paper and prints at 100%, so the grid can sit next to your pegboard while you work. The thirty charts below are original designs, not copied artwork, and each one can be opened in the maker if you want to switch it to another bead brand or fix a bead. Print one for a quick keychain, or centre a chart on a full 29 × 29 board for something bigger.</p>
     </div>
   </section>
 
@@ -1303,9 +1469,11 @@ function patternsPage() {
         <h2>Turn your own photo into a fuse bead pattern</h2>
         <p>The maker uses the same chart and bead-list layout as the PDFs above. Upload a photo, choose a palette and print the result.</p>
       </div>
-      <p><a class="btn btn--primary" href="/#tool">Open the pattern maker</a> <a class="btn btn--ghost" href="/perler-bead-templates/">Get a blank template</a></p>
+      <p><a class="btn btn--primary" href="/#tool">Open the pattern maker</a>${Pages.isLive("/perler-bead-templates/") ? ` <a class="btn btn--ghost" href="/perler-bead-templates/">Get a blank template</a>` : ""}</p>
     </div>
   </section>
+
+  ${keepGoing("patterns")}
 
   ${ctaBand("Want the same chart with your own photo?", "Upload a photo, get a coded chart and a printable PDF in about a minute.", "/#tool", "Make my pattern")}
 </main>
@@ -1340,7 +1508,7 @@ function templatesPage() {
     }
   };
   return head({
-    title: "Perler Bead Templates – Free Printable Grids",
+    title: "Perler Bead Templates – Free Printable PDF Grids",
     desc: "Free printable perler bead templates in six square sizes, from 10×10 to 64×64. Download an A4 PDF with grid lines and print at 100%.",
     path: "/perler-bead-templates/",
     active: "templates",
@@ -1413,6 +1581,8 @@ function templatesPage() {
       </div>
     </div>
   </section>
+
+  ${keepGoing("templates")}
 
   ${ctaBand("Prefer to start from a photo?", "The perler bead pattern maker will fill the grid for you and count every colour.", "/#tool", "Open the maker")}
 </main>
@@ -1497,15 +1667,7 @@ function toolPage(opts) {
     </div>
   </section>
 
-  <section class="section section--tight">
-    <div class="wrap">
-      <p class="eyebrow-line">Keep going</p>
-      <div class="card">
-        <h2 style="font-size:1.45rem">More ways to use the maker</h2>
-        <p>Browse the <a href="/perler-bead-designs/">perler bead designs</a>, print a <a href="/fuse-bead-patterns/">fuse bead pattern</a>, or start with a <a href="/perler-bead-templates/">blank template</a>. If you are new to fusing, read the <a href="/how-to-iron-perler-beads/">ironing guide</a> first.</p>
-      </div>
-    </div>
-  </section>
+  ${keepGoing(opts.key)}
 
   ${ctaBand(opts.ctaTitle, opts.ctaText, "#tool", "Open the maker")}
 </main>
@@ -1518,7 +1680,8 @@ ${scripts({ tool: true })}
 
 function makerPage() {
   return toolPage({
-    title: "Perler Bead Maker – Turn a Photo into a Pattern",
+    key: "maker",
+    title: "Perler Bead Maker – Turn a Photo into Beads",
     desc: "A free perler bead maker that turns a photo into a coded chart with exact bead counts and a printable PDF. Edit any bead before you export.",
     path: "/perler-bead-maker/",
     h1: "Perler bead maker",
@@ -1548,7 +1711,8 @@ function makerPage() {
 
 function generatorPage() {
   return toolPage({
-    title: "Perler Bead Generator – Free Online Pattern Tool",
+    key: "generator",
+    title: "Perler Bead Generator – Instant Pattern from Any Image",
     desc: "Free online perler bead generator. Turn any image into a coded bead chart with Perler, Hama or Artkal colours, exact counts and a printable PDF.",
     path: "/perler-bead-generator/",
     h1: "Perler bead generator",
@@ -1578,7 +1742,8 @@ function generatorPage() {
 
 function fuseMakerPage() {
   return toolPage({
-    title: "Fuse Bead Pattern Maker – Perler, Hama & Artkal",
+    key: "fuseMaker",
+    title: "Fuse Bead Pattern Maker – Free Online Generator",
     desc: "Free fuse bead pattern maker for Perler, Hama and Artkal beads. Convert a photo into a coded chart, edit any bead and print a ready-to-follow PDF.",
     path: "/fuse-bead-pattern-maker/",
     h1: "Fuse bead pattern maker",
@@ -1662,7 +1827,7 @@ function ironGuidePage() {
     ]
   };
   return head({
-    title: "How to Iron Perler Beads – Step-by-Step Guide",
+    title: "How to Iron Perler Beads (Step-by-Step Guide)",
     desc: "Learn how to iron perler beads without curling or melting them. Temperature, timing, paper, two-sided fusing and troubleshooting in one guide.",
     path: "/how-to-iron-perler-beads/",
     active: "iron",
@@ -1762,6 +1927,8 @@ function ironGuidePage() {
     </div>
   </section>
 
+  ${keepGoing("iron")}
+
   ${ctaBand("Ready to fuse something?", "Make a coded perler pattern, then follow the guide for a flat finish.", "/#tool", "Make a pattern")}
 </main>
 ${footer()}
@@ -1785,8 +1952,9 @@ function notFoundPage() {
     <p class="lede">The page you asked for is not here. It may have moved, or the link may have a typo. Try one of these instead:</p>
     <p style="margin-top:24px">
       <a class="btn btn--primary" href="/">Pattern maker</a>
-      <a class="btn" href="/perler-bead-designs/">Perler bead designs</a>
-      <a class="btn" href="/fuse-bead-patterns/">Fuse bead patterns</a>
+      ${CONTENT_PAGES.map(Pages.page).filter(function (p) { return Pages.isLive(p.path); }).slice(0, 2).map(function (p) {
+        return `<a class="btn" href="${p.path}">${esc(capitalise(p.keyword))}</a>`;
+      }).join("\n      ")}
     </p>
   </section>
 </main>
@@ -1869,7 +2037,7 @@ function buildAssets() {
 
   // design previews
   BPMPatterns.LIST.forEach(function (def) {
-    write("assets/designs/" + def.slug + ".svg", patternSvg(def));
+    write(designFile(def, "svg"), patternSvg(def));
   });
 
   // pattern PDFs
@@ -1879,19 +2047,19 @@ function buildAssets() {
       title: def.name + " — perler bead pattern",
       site: "beadpatternmaker.io"
     });
-    write("assets/pdfs/" + def.slug + ".pdf", Buffer.from(bytes));
+    write(designFile(def, "pdf"), Buffer.from(bytes));
   });
 
   // template SVGs and PDFs
   TEMPLATES.forEach(function (t) {
-    write("assets/templates/" + t.slug + ".svg", templateSvg(t));
+    write(templateFile(t, "svg"), templateSvg(t));
     const bytes = BPMPDF.build(blankPattern(t.w, t.h), {
       title: t.name + " — blank perler bead template",
       site: "beadpatternmaker.io",
       blank: true,
       showCodes: false
     });
-    write("assets/templates/" + t.slug + ".pdf", Buffer.from(bytes));
+    write(templateFile(t, "pdf"), Buffer.from(bytes));
   });
 
   // manifest
@@ -1926,7 +2094,7 @@ function buildPages() {
 function buildSitemap() {
   const urls = [
     { loc: "/", priority: "1.0", changefreq: "weekly" },
-    { loc: "/perler-bead-designs/", priority: "0.9", changefreq: "weekly", images: BPMPatterns.LIST.map(function (d) { return { loc: "/assets/designs/" + d.slug + ".svg", title: d.name + " perler bead design" }; }) },
+    { loc: "/perler-bead-designs/", priority: "0.9", changefreq: "weekly", images: BPMPatterns.LIST.map(function (d) { return { loc: designFile(d, "svg"), title: d.name + " perler bead design" }; }) },
     { loc: "/fuse-bead-ideas/", priority: "0.9", changefreq: "weekly" },
     { loc: "/fuse-bead-patterns/", priority: "0.9", changefreq: "weekly" },
     { loc: "/perler-bead-templates/", priority: "0.8", changefreq: "monthly" },
@@ -1934,7 +2102,7 @@ function buildSitemap() {
     { loc: "/perler-bead-generator/", priority: "0.7", changefreq: "monthly" },
     { loc: "/fuse-bead-pattern-maker/", priority: "0.7", changefreq: "monthly" },
     { loc: "/how-to-iron-perler-beads/", priority: "0.8", changefreq: "monthly" }
-  ];
+  ].filter(function (u) { return Pages.isLive(u.loc); });
   const body = urls.map(function (u) {
     let s = `  <url>
     <loc>${SITE}${u.loc}</loc>
@@ -1967,14 +2135,18 @@ Sitemap: ${SITE}/sitemap.xml
 }
 
 function main() {
-  fs.mkdirSync(path.join(root, "assets/designs"), { recursive: true });
-  fs.mkdirSync(path.join(root, "assets/pdfs"), { recursive: true });
-  fs.mkdirSync(path.join(root, "assets/templates"), { recursive: true });
+  // Start the generated asset folders empty so renamed or removed designs do
+  // not leave stale files behind.
+  ["assets/designs", "assets/pdfs", "assets/templates"].forEach(function (dir) {
+    fs.rmSync(path.join(root, dir), { recursive: true, force: true });
+    fs.mkdirSync(path.join(root, dir), { recursive: true });
+  });
   buildAssets();
   buildPages();
   buildSitemap();
   console.log("built " + (BPMPatterns.LIST.length) + " designs, " + TEMPLATES.length + " templates");
   console.log("pages: 10 · sitemap · image assets · PDFs");
+  console.log("live (wave " + Pages.LIVE_WAVE + "): " + Pages.livePages().map(function (p) { return p.path; }).join(" "));
   console.log("site root: " + root);
 }
 

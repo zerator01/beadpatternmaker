@@ -57,18 +57,40 @@ Everything runs client-side. Photos are never uploaded.
 
 ## Pages
 
-| URL | Target | What it is |
+| URL | Target | Wave | What it is |
+| --- | --- | --- | --- |
+| `/` | perler bead pattern maker | 1 | The tool and homepage |
+| `/perler-bead-designs/` | perler bead designs | 1 | Filterable gallery of 30 designs |
+| `/fuse-bead-ideas/` | fuse bead ideas | 1 | The designs sorted by occasion, each with a finishing idea |
+| `/fuse-bead-patterns/` | fuse bead patterns | 2 | Printable charts and PDF downloads |
+| `/perler-bead-templates/` | perler bead templates | 2 | Six blank printable grids |
+| `/perler-bead-maker/` | perler bead maker | 2 | Tool landing page |
+| `/perler-bead-generator/` | perler bead generator | 2 | Generator landing page |
+| `/fuse-bead-pattern-maker/` | fuse bead pattern maker | 2 | Hama-first tool landing page |
+| `/how-to-iron-perler-beads/` | how to iron perler beads | 3 | Long-form guide + HowTo schema |
+| `/404.html` | — | — | Not-found page |
+
+## Launch waves
+
+Pages go live in waves, so each batch can show up in Search Console before the
+next one ships. `tools/pages.js` holds the page list and `LIVE_WAVE`:
+
+| Wave | Pages | Ship it |
 | --- | --- | --- |
-| `/` | perler bead pattern maker | The tool and homepage |
-| `/perler-bead-designs/` | perler bead designs | Filterable gallery of 30 designs |
-| `/fuse-bead-ideas/` | fuse bead ideas | Craft ideas + the same design library |
-| `/fuse-bead-patterns/` | fuse bead patterns | Printable charts and PDF downloads |
-| `/perler-bead-templates/` | perler bead templates | Six blank printable grids |
-| `/perler-bead-maker/` | perler bead maker | Tool landing page |
-| `/perler-bead-generator/` | perler bead generator | Generator landing page |
-| `/fuse-bead-pattern-maker/` | fuse bead pattern maker | Hama-first tool landing page |
-| `/how-to-iron-perler-beads/` | how to iron perler beads | Long-form guide + HowTo schema |
-| `/404.html` | — | Not-found page |
+| 1 | `/`, `/perler-bead-designs/`, `/fuse-bead-ideas/` | First |
+| 2 | Patterns, templates and the three tool pages | About 4 weeks later, once the wave 1 pages are indexed |
+| 3 | `/how-to-iron-perler-beads/` | After wave 2 |
+
+Only live pages appear in the nav, the footer, in-page links and the sitemap,
+and only live pages are copied into `dist`. The other pages are still generated
+in the repo so you can preview them locally. To ship the next wave, raise
+`LIVE_WAVE` and run the build again. `tools/build-dist.js` fails if a live page
+links to one that has not launched.
+
+`tools/pages.js` also sets the anchor text of internal links. Other pages link
+to a page with its target keyword, and every page links back to the homepage
+with its own variant of “perler bead pattern maker”. Gallery cards open in
+`/perler-bead-maker/` once wave 2 is live, and in the homepage tool until then.
 
 ## Run it locally
 
@@ -79,6 +101,8 @@ open http://127.0.0.1:8901
 ```
 
 Use a real HTTP server, not `file://`, because every link is root-absolute.
+The repo root also contains the pages that have not launched yet. To see only
+what ships, run `node tools/build-dist.js` and serve `dist/` instead.
 
 ## Build
 
@@ -91,11 +115,14 @@ node tools/build-dist.js  # assemble ./dist and fail on broken local links
 `tools/build.js` is the only generator. It writes:
 
 - all 10 HTML pages (from the templates in that file)
-- `assets/designs/*.svg` (30 previews)
-- `assets/pdfs/*.pdf` (30 printable charts)
-- `assets/templates/*.svg` + `assets/templates/*.pdf` (6 blank grids)
-- `sitemap.xml`, `robots.txt`, `manifest.webmanifest`
+- `assets/designs/<slug>-perler-bead-pattern-<w>x<h>.svg` (30 previews)
+- `assets/pdfs/<slug>-perler-bead-pattern-<w>x<h>.pdf` (30 printable charts)
+- `assets/templates/perler-bead-template-<w>x<h>.svg` + `.pdf` (6 blank grids)
+- `sitemap.xml` (live pages only), `robots.txt`, `manifest.webmanifest`
 - `assets/og-fallback.png` and the touch icon
+
+The design, PDF and template folders are emptied at the start of each build,
+so renamed or removed designs do not leave old files behind.
 
 `assets/og.png` is a branded screenshot generated from `tools/og.html` with
 Chrome and is intentionally preserved across rebuilds. If it is deleted, the
@@ -148,6 +175,7 @@ js/app.js                   the tool UI
 js/gallery.js               theme filter
 js/site.js                  mobile nav + year
 tools/build.js              static site generator
+tools/pages.js              page list, launch waves and link anchor text
 tools/og.html               social-card source
 tools/build-dist.js         deploy folder + link checker
 tests/selftest.js           engine + generated-site tests

@@ -19,6 +19,12 @@ const BPMPatterns = require(path.join(js, "patterns-data.js"));
 const BPMPDF = require(path.join(js, "pdf.js"));
 const BPMShare = require(path.join(js, "share.js"));
 const BPMFrame = require(path.join(js, "frame.js"));
+const Pages = require(path.join(root, "tools", "pages.js"));
+
+function designFile(def, ext) {
+  const d = BPMPatterns.dimensions(def);
+  return path.join(root, "assets", ext === "pdf" ? "pdfs" : "designs", `${def.slug}-perler-bead-pattern-${d.w}x${d.h}.${ext}`);
+}
 
 let checks = 0;
 function ok(label, fn) {
@@ -47,9 +53,9 @@ ok("three palettes with unique single-character codes", () => {
   }
 });
 
-ok("all palettes share the same code set so a design can be remapped", () => {
-  const sets = Object.values(BPMPalettes.PALETTES).map((p) => p.colors.map((c) => c.code).sort().join(""));
-  assert.strictEqual(new Set(sets).size, 1);
+ok("all palettes list the same codes in the same order so a chart can switch palette in place", () => {
+  const orders = Object.values(BPMPalettes.PALETTES).map((p) => p.colors.map((c) => c.code).join(""));
+  assert.strictEqual(new Set(orders).size, 1);
 });
 
 console.log("patterns");
@@ -236,8 +242,8 @@ ok("all expected pages and assets exist", () => {
   ];
   for (const page of pages) assert.ok(fs.existsSync(path.join(root, page)), "missing " + page);
   assert.ok(fs.statSync(path.join(root, "assets/og.png")).size > 10_000, "OG image looks empty");
-  assert.ok(fs.existsSync(path.join(root, "assets/pdfs/cat.pdf")));
-  assert.ok(fs.existsSync(path.join(root, "assets/templates/29-square.pdf")));
+  assert.ok(fs.existsSync(designFile(BPMPatterns.find("cat"), "pdf")));
+  assert.ok(fs.existsSync(path.join(root, "assets/templates/perler-bead-template-29x29.pdf")));
   assert.ok(fs.existsSync(path.join(root, "sitemap.xml")));
 });
 
@@ -270,9 +276,22 @@ ok("every local absolute asset reference in the built HTML resolves", () => {
 ok("every design has a preview, a PDF and its metadata on the design page", () => {
   const html = fs.readFileSync(path.join(root, "perler-bead-designs/index.html"), "utf8");
   for (const def of BPMPatterns.LIST) {
-    assert.ok(fs.existsSync(path.join(root, "assets/designs", def.slug + ".svg")), "preview " + def.slug);
-    assert.ok(fs.existsSync(path.join(root, "assets/pdfs", def.slug + ".pdf")), "pdf " + def.slug);
+    assert.ok(fs.existsSync(designFile(def, "svg")), "preview " + def.slug);
+    assert.ok(fs.existsSync(designFile(def, "pdf")), "pdf " + def.slug);
     assert.ok(html.includes("/?design=" + def.slug), "maker link for " + def.slug);
+  }
+});
+
+ok("only live pages are in the sitemap, and live pages never link to unlaunched ones", () => {
+  const live = Pages.livePages().map((p) => p.path);
+  const sitemap = fs.readFileSync(path.join(root, "sitemap.xml"), "utf8");
+  const listed = [...sitemap.matchAll(/<loc>https:\/\/beadpatternmaker\.io(\/[^<]*)<\/loc>/g)].map((m) => m[1]);
+  assert.deepStrictEqual(listed.sort(), live.slice().sort());
+  const hidden = Pages.PAGES.filter((p) => !Pages.isLive(p.path)).map((p) => p.path);
+  const files = live.map((p) => path.join(p, "index.html")).concat("404.html");
+  for (const file of files) {
+    const html = fs.readFileSync(path.join(root, file), "utf8");
+    for (const target of hidden) assert.ok(!html.includes(`href="${target}`), file + " links to unlaunched " + target);
   }
 });
 
