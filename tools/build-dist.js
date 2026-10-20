@@ -1,28 +1,23 @@
 /* Build the deployable folder: node tools/build-dist.js
-   Copies only what the site needs (no tests, docs or build tools) and then
-   checks that every root-absolute reference actually resolves inside dist. */
+   Copies only what the site needs (no tests, docs or build tools) and only the
+   pages in the live wave (tools/pages.js), then checks that every root-absolute
+   reference actually resolves inside dist. A link to a page that has not
+   launched yet fails that check. */
 "use strict";
 
 const fs = require("fs");
 const path = require("path");
+const Pages = require("./pages.js");
 
 const root = path.join(__dirname, "..");
 const dist = path.join(root, "dist");
 
 const FILES = ["index.html", "404.html", "robots.txt", "sitemap.xml", "_headers", "manifest.webmanifest"];
-const DIRS = [
-  "css",
-  "js",
-  "assets",
-  "perler-bead-designs",
-  "fuse-bead-ideas",
-  "fuse-bead-patterns",
-  "perler-bead-templates",
-  "perler-bead-maker",
-  "perler-bead-generator",
-  "fuse-bead-pattern-maker",
-  "how-to-iron-perler-beads"
-];
+const DIRS = ["css", "js", "assets"].concat(
+  Pages.livePages()
+    .filter((p) => p.path !== "/")
+    .map((p) => p.path.replace(/^\/|\/$/g, ""))
+);
 
 fs.rmSync(dist, { recursive: true, force: true });
 fs.mkdirSync(dist, { recursive: true });

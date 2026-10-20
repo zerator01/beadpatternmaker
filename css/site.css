@@ -1308,6 +1308,8 @@ input[type="range"]::-moz-range-thumb {
   background: var(--line);
   border: 1px solid var(--line);
 }
+/* one row that stretches to however many cards there are */
+.callout-grid--fit { grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); }
 .callout-card {
   padding: 20px;
   background: var(--panel);
@@ -1476,7 +1478,8 @@ table.beads td.num { font-family: var(--font-mono); text-align: right; font-size
   text-transform: uppercase;
   white-space: nowrap;
 }
-.filter-bar button {
+.filter-bar button,
+.filter-bar a {
   padding: 8px 12px;
   font: inherit;
   letter-spacing: 0.035em;
@@ -1488,8 +1491,12 @@ table.beads td.num { font-family: var(--font-mono); text-align: right; font-size
   cursor: pointer;
   white-space: nowrap;
 }
-.filter-bar button:last-child { border-right: 0; }
-.filter-bar button:hover { background: var(--panel-2); color: var(--ink); }
+.filter-bar a { display: inline-flex; align-items: center; text-decoration: none; }
+.filter-bar button:last-child,
+.filter-bar a:last-child { border-right: 0; }
+.filter-bar button:hover,
+.filter-bar a:hover { background: var(--panel-2); color: var(--ink); }
+.jump-bar { margin: 26px 0 0; }
 .filter-bar button[aria-pressed="true"] {
   background: var(--ink);
   color: var(--panel);
@@ -1584,6 +1591,7 @@ table.beads td.num { font-family: var(--font-mono); text-align: right; font-size
   white-space: nowrap;
   font-size: 8.5px;
 }
+.pattern-card .card-actions .btn--wide { flex-grow: 2; }
 .pattern-card .card-actions .btn--ghost { background: transparent; border-color: var(--line-mid); color: var(--ink-2); }
 .pattern-card .card-actions .btn--ghost:hover { background: var(--ink); border-color: var(--ink); color: var(--panel); }
 

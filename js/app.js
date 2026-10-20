@@ -1195,6 +1195,19 @@
     state.allowed = null;
     buildStash();
     buildStrip();
+    if (!state.img && state.pattern) {
+      // A gallery design or shared chart has no photo to match again. Every
+      // palette lists the same codes in the same order, so the cells stay put
+      // and each bead takes the new palette's colour for its code.
+      state.pattern.palette = palette();
+      syncStrip();
+      drawPreview();
+      updateStats();
+      updateLegend();
+      saveSoon();
+      say("Switched the chart to the " + palette().label + " palette.");
+      return;
+    }
     scheduleGenerate();
   });
 

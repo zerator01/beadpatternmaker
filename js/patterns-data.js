@@ -57,7 +57,7 @@ var BPMPatterns = (function () {
       theme: "flowers",
       difficulty: "easy",
       description: "Ten white petals around a yellow centre, with a short green stem.",
-      idea: "Scale it up to a 29 × 29 board for a coaster, or keep it small for a hair clip.",
+      idea: "Centre it on a 29 × 29 board with a plain border for a coaster, or glue it to a clip for your hair.",
       rows: [
         "...............",
         ".....WW.WW.....",
@@ -222,7 +222,7 @@ var BPMPatterns = (function () {
       theme: "animals",
       difficulty: "easy",
       description: "Long ears, round cheeks and a tiny pink nose.",
-      idea: "Make a mini version for a spring card or an Easter basket tag.",
+      idea: "Glue it to a spring card, or tie it to an Easter basket as a gift tag.",
       rows: [
         ".............",
         "...W.....W...",
@@ -245,7 +245,7 @@ var BPMPatterns = (function () {
       theme: "animals",
       difficulty: "medium",
       description: "A round panda face with sleepy eyes and a soft white muzzle.",
-      idea: "Use a 29 × 29 board to make a cushion-sized version.",
+      idea: "Centre it on a 29 × 29 board with a pale background and frame it as a wall tile.",
       rows: [
         ".............",
         "...KK...KK...",
@@ -566,7 +566,7 @@ var BPMPatterns = (function () {
       theme: "holiday",
       difficulty: "easy",
       description: "A layered green tree with a yellow star and a sturdy brown trunk.",
-      idea: "Make a set in three sizes and arrange them as a table centrepiece.",
+      idea: "Make three in different greens and arrange them as a table centrepiece.",
       rows: [
         "......Y......",
         ".....GGG.....",
